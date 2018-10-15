@@ -89,7 +89,7 @@ class Mapper
     {
         $res = [];
         foreach ($map as $key => $value) {
-            $arr = explode(".", $value['value']);
+            $arr = explode(".", $value['name']);
             if($arr[0] == $prefix) {
                 $res[$key] = $value;
             }
@@ -289,14 +289,14 @@ class Mapper
         if (count($params)>0) {
             $filters = Convert::arrayToDot($params, $operators);
             foreach ($filters as $filter => $value) {
-                if(!isset($map[$filter]['value'])){
+                if(!isset($map[$filter]['name'])){
                     continue;
                 } else if (is_array($value)) {
-                    $column = $map[$filter]['value'];
+                    $column = $map[$filter]['name'];
                     $operator = array_keys($value)[0];
                     $where_value = Convert::convert($map[$filter]['type'], array_values($value)[0], $opts=['is_from_db'=>false]);
                 } else {
-                    $column = $map[$filter]['value'];
+                    $column = $map[$filter]['name'];
                     $operator = '=';
                     $where_value = Convert::convert($map[$filter]['type'], $value, $opts=['is_from_db'=>false]);
                 }

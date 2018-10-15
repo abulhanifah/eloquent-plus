@@ -16,14 +16,14 @@ abstract class Model extends BaseModel {
      *
      * @var string
      */
-    protected $table_alias;
+    static protected $table_alias;
 
     /**
      * The relations to queries.
      *
      * @var array
      */
-    protected $table_relations = [];
+    static protected $table_relations = [];
 
     /**
      * The fields to queries.
@@ -141,7 +141,9 @@ abstract class Model extends BaseModel {
     		$table = $maps['table'];
     		if(!isset($table['name'])) {
     			$table['name'] = $this->table;
-    		}
+    		} else {
+                $this->table = $table['name'];
+            }
     		if(!isset($table['as'])) {
     			$table['as'] = $this->getAlias();
     		} else {
@@ -193,8 +195,9 @@ abstract class Model extends BaseModel {
             }
             $maps['relations'][$krel] = $rel;
         }
-
-        $this->table_relations = $maps['relations'] ?: [];
+        if(isset($maps['relations'])) {
+            $this->table_relations = $maps['relations'];
+        }
         $this->maps = $maps;
     }
 
@@ -203,7 +206,10 @@ abstract class Model extends BaseModel {
             //todo get from attributes
         }
 
-        $this->fields = $maps['fields'] ?: [];
+        if(isset($maps['fields'])) {
+            $this->fields = $maps['fields'];
+        }
+
         $this->maps = $maps;
     }
 

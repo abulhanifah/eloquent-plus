@@ -80,7 +80,6 @@ class Builder extends BaseBuilder {
             }
         }
         $ret['aggregates'] = $aggregates;
-
         $this->params = $ret;
     }
 
@@ -109,9 +108,12 @@ class Builder extends BaseBuilder {
     }
 
     public function multiMap($request=[]) {
-        $this->setParams($request);
+        $params = is_array($request) ? $request : $request->all();
+        $this->setParams($params);
+
+        $map = $this->model->maps['fields'];
         $query = $this->query;
-        $subquery = $this->getSubQuery($query);
+        $subquery = $this->getSubQuery($query,$map);
 
         $query = $query->getConnection()->table($this->model->table)
             ->fromSub($subquery,$this->model->table_alias);
@@ -121,18 +123,26 @@ class Builder extends BaseBuilder {
         }       
 
         $this->getFields($query, $this->params['fields']);
-        
+
+        if (count($this->params['filters'])>0) {
+            $this->getWhere($query, $map, $this->params['filters']);
+        }
+
+        if (count($this->params['sorts'])>0) {
+            $this->getOrder($query, $map, $this->params['sorts']);
+        }
+
         return Mapper::getMapResult($query, $this->model->getMapTable(), $this->model->getMapFields()); 
     }
 
     public function countMap($request=[]) {
         $this->setParams($request);
         $query = $this->query;
-        $query = $this->getSubQuery($query);
+        $query = $this->getSubQuery($query,$this->model->maps['fields']);
         return $this->getCountQuery($query);
     }
 
-    protected function getSubQuery($query) {
+    protected function getSubQuery($query,$map) {
         $query = $query->getConnection()->table($this->model->table." as ".$this->model->table_alias);
 
         foreach ($this->model->table_relations as $rel) {
@@ -142,6 +152,16 @@ class Builder extends BaseBuilder {
         }
 
         $query->select($this->model->table_alias.".*");
+
+        if (count($this->params['filters'])>0) {
+            $this->getWhere($query, Mapper::mapByPrefix($map, $this->model->table_alias), $this->params['filters']);
+        }
+
+        if (count($this->params['sorts'])>0) {
+            $this->getOrder($query, Mapper::mapByPrefix($map, $this->model->table_alias), $this->params['sorts']);
+        } else if (isset($this->maps['order']['main'])) {
+            $this->getOrder($query, [], $this->maps['order']['main']);
+        }
 
         return $query;
     }
@@ -157,7 +177,7 @@ class Builder extends BaseBuilder {
         if (count($query)>0) {
             $ret = [];
             if (count($params)>0) {
-                $fields = Convert::arrayToDot($params, self::$operators);
+                $fields = Convert::arrayToDot($params, static::$operators);
                 foreach (array_keys($fields) as $field) {
                     if(!isset($map[$field]['name'])){
                         continue;
@@ -194,21 +214,21 @@ class Builder extends BaseBuilder {
      * @param  array $map
      * @param  array $params
      */
-    public static function getWhere($query=[], $map=[], $params=[], $type='and')
+    public function getWhere($query=[], $map=[], $params=[], $type='and')
     {
         if (count($query)>0) {
             if (count($params)>0) {
                 if (count($map)>0) {
                     if ($type=='and') {
                         $filters = [];
-                        $filters = Mapper::getMapWhere($map, $params, self::$operators);
+                        $filters = Mapper::getMapWhere($map, $params, static::$operators);
                         foreach ($filters as $filter) {
                             $query->where($filter[0], $filter[1], $filter[2]);
                         }
                     } else if ($type=='or') {
                         foreach ($params as $or_params) {
                             $filters = [];
-                            $filters = Mapper::getMapWhere($map, $or_params, self::$operators);
+                            $filters = Mapper::getMapWhere($map, $or_params, static::$operators);
                             $query->where(function ($query) use ($filters) {
                                 foreach ($filters as $or_filter) {
                                     $query->where($or_filter[0], $or_filter[1], $or_filter[2], 'or');
@@ -260,18 +280,18 @@ class Builder extends BaseBuilder {
      * @param  array $map
      * @param  array $params
      */
-    public static function getOrder($query=[], $map=[], $params=[])
+    public function getOrder($query=[], $map=[], $params=[])
     {
         if (count($query)>0) {
             if (count($map)>0) {
                 $ret = [];
                 if (count($params)>0) {
-                    $sorts = Convert::arrayToDot($params, self::$operators);
+                    $sorts = Convert::arrayToDot($params, static::$operators);
                     foreach ($sorts as $sort => $value) {
                         if(!isset($map[$sort])){
                             continue;
                         } else {
-                            $ret[$map[$sort]['value']] = ($value==-1 || $value=='desc') ? 'desc' : 'asc';
+                            $ret[$map[$sort]['name']] = ($value==-1 || $value=='name') ? 'desc' : 'asc';
                         }
                     }
                 }
