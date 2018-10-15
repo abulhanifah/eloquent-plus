@@ -2,7 +2,7 @@
     "name": "abulhanifah/eloquent-plus",
     "description": "An ORM with mapping",
     "license": "MIT",
-    "version": "1.0.0.0",
+    "version": "1.1.0.0",
     "authors": [
         {
             "name": "Alir Retno",
@@ -20,10 +20,6 @@
     "autoload":{
       "psr-0": {
         "Nahl\\": "src/"
-      },
-      "psr-4": {
-        "Controllers\\": "test/Controllers/",
-        "Models\\": "test/Models/" 
       }
     }
 }
