@@ -1,0 +1,29 @@
+{
+    "name": "abulhanifah/eloquent-plus",
+    "description": "An ORM with mapping",
+    "license": "MIT",
+    "version": "1.0.0.0",
+    "authors": [
+        {
+            "name": "Alir Retno",
+            "email": "alirretno@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+      "php": ">=5.6.4",
+      "illuminate/support": ">=5.4",
+      "illuminate/container": ">=5.4",
+      "illuminate/database": ">=5.4",
+      "illuminate/events": ">=5.4"
+    },
+    "autoload":{
+      "psr-0": {
+        "Nahl\\": "src/"
+      },
+      "psr-4": {
+        "Controllers\\": "test/Controllers/",
+        "Models\\": "test/Models/" 
+      }
+    }
+}
