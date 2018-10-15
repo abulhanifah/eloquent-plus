@@ -4,6 +4,7 @@ namespace Nahl;
 
 use Illuminate\Database\Eloquent\Model as BaseModel;
 use Illuminate\Support\Str;
+use Nahl\Providers\QueryBuilder;
 
 /**
  * @mixin \Illuminate\Database\Eloquent\Builder
@@ -22,7 +23,7 @@ abstract class Model extends BaseModel {
      *
      * @var array
      */
-    static protected $relations = [];
+    protected $table_relations = [];
 
     /**
      * The fields to queries.
@@ -39,12 +40,16 @@ abstract class Model extends BaseModel {
     static protected $maps = [];
 
     function __get($var) {
-	    return static::$$var;
+	    if(isset(static::$$var)) {
+            return static::$$var;
+        } else {
+            return $this->$var;
+        }
 	}
 
-	function __set($var) {
-	    static::$$var = $var;
-	}
+	function __set($name,$value) {
+        static::$$name = $value;
+    }
 
     /**
      * Create a new Eloquent query builder for the model.
@@ -55,6 +60,62 @@ abstract class Model extends BaseModel {
     public function newEloquentBuilder($query)
     {
         return new Builder($query);
+    }
+
+    /**
+     * Begin querying the model.
+     *
+     * @return Nahl\Providers\QueryBuilder
+     */
+    public static function query()
+    {
+        return (new static)->newQuery();
+    }
+
+    /**
+     * Get a new query builder for the model's table.
+     *
+     * @return Nahl\Providers\QueryBuilder
+     */
+    public function newQuery()
+    {
+        $builder = $this->newQueryWithoutScopes();
+
+        foreach ($this->getGlobalScopes() as $identifier => $scope) {
+            $builder->withGlobalScope($identifier, $scope);
+        }
+
+        return $builder;
+    }
+
+    /**
+     * Get a new query builder that doesn't have any global scopes.
+     *
+     * @return Nahl\Providers\QueryBuilder|static
+     */
+    public function newQueryWithoutScopes()
+    {
+        $builder = $this->newEloquentBuilder($this->newBaseQueryBuilder());
+
+        // Once we have the query builders, we will set the model instances so the
+        // builder can easily access any information it may need from the model
+        // while it is constructing and executing various queries against it.
+        return $builder->setModel($this)
+                    ->with($this->with)
+                    ->withCount($this->withCount);
+    }
+
+    /**
+     * Get a new query builder instance for the connection.
+     *
+     * @return Nahl\Providers\QueryBuilder
+     */
+    protected function newBaseQueryBuilder()
+    {
+        $connection = $this->getConnection();
+        return new QueryBuilder(
+            $connection, $connection->getQueryGrammar(), $connection->getPostProcessor()
+        );
     }
 
     protected function getInitial($str) {
@@ -102,39 +163,39 @@ abstract class Model extends BaseModel {
     }
 
     public function setMapRelations($maps=[]) {
-    	if(!isset($maps['relations'])) {
-    		$maps['relations'] = $this->relations;
-    	}
+        if(!isset($maps['relations'])) {
+            $maps['relations'] = $this->table_relations;
+        }
 
-		foreach ($maps['relations'] as $krel => $rel) {
-			if(!isset($rel['table']) && isset($rel['model'])) {
-				$n = new $rel['model'];
-				$rel['table'] = $n->table;
-			}
-			if(!isset($rel['as'])) {
-    			$rel['as'] = $this->getInitial($rel['table']);
-    		}
-    		if(!isset($rel['on'])) {
-	    		if(!isset($rel['foreign_key']) && isset($rel['model'])) {
-    				$n = new $rel['model'];
-    				$rel['foreign_key'] = $rel['as'].".".$n->getKey();
-    			}
-	    		if(!isset($rel['local_key'])) {
-	    			$rel['local_key'] = $this->getAlias().".".$this->getKey();
-	    		}
-	    		$rel['on'] = [[$rel['foreign_key'],'=',$rel['local_key']]];
-    		} else {
-    			reset($rel['on']);
-				$first_key = key($rel['on']);
-				if(gettype($first_key) != 'integer') {
-					$rel['on'] = [$rel['on']];
-				}
-    		}
-			$maps['relations'][$krel] = $rel;
-		}
+        foreach ($maps['relations'] as $krel => $rel) {
+            if(!isset($rel['table']) && isset($rel['model'])) {
+                $n = new $rel['model'];
+                $rel['table'] = $n->table;
+            }
+            if(!isset($rel['as'])) {
+                $rel['as'] = $this->getInitial($rel['table']);
+            }
+            if(!isset($rel['on'])) {
+                if(!isset($rel['foreign_key']) && isset($rel['model'])) {
+                    $n = new $rel['model'];
+                    $rel['foreign_key'] = $rel['as'].".".$n->getKey();
+                }
+                if(!isset($rel['local_key'])) {
+                    $rel['local_key'] = $this->getAlias().".".$this->getKey();
+                }
+                $rel['on'] = [[$rel['foreign_key'],'=',$rel['local_key']]];
+            } else {
+                reset($rel['on']);
+                $first_key = key($rel['on']);
+                if(gettype($first_key) != 'integer') {
+                    $rel['on'] = [$rel['on']];
+                }
+            }
+            $maps['relations'][$krel] = $rel;
+        }
 
-        $this->relations = $maps['relations'] ?: [];
-    	$this->maps = $maps;
+        $this->table_relations = $maps['relations'] ?: [];
+        $this->maps = $maps;
     }
 
     public function setMapFields($maps=[]) {
@@ -153,27 +214,16 @@ abstract class Model extends BaseModel {
     public function setMaps($maps=[]) {
     	$this->setMapTable($maps);
         $this->setMapRelations($maps);
-    	$this->setMapFields($maps);
-    	$this->maps = $maps;
+        $this->setMapFields($maps);
     }
 
    	public function getMaps() {
    		return $this->setMaps($this->maps);
    	}
 
-   	public static function collect($params, $type='paginated') {
-   		$method = $type."Map";
+   	public static function collect($maps,$params=[], $type='paginated') {
+   		(new static())->setMaps($maps);
+        $method = $type."Map";
    		return static::query()->$method($params);
    	}
-
-   	/**
-     * Overide method newEloquentBuilder.
-     *
-     * @param  \Illuminate\Database\Query\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder|static
-     */
-    public function newEloquentBuilder($query)
-    {
-        return new Builder($query);
-    }
 }

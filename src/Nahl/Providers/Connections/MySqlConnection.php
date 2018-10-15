@@ -9,7 +9,7 @@ class MySqlConnection extends BaseConnection {
     * Begin a fluent query against a database table.
     *
     * @param  string  $table
-    * @return MySql\Query\Builder
+    * @return Nahl\Providers\QueryBuilder
     */
     public function table($table)
     {

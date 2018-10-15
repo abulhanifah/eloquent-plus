@@ -1,6 +1,6 @@
 <?php
 
-namespace Nahl\ORM;
+namespace Nahl;
 
 use \DateTime;
 use \RecursiveArrayIterator;

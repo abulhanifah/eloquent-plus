@@ -1,8 +1,8 @@
 <?php
 
-namespace Nahl\ORM;
+namespace Nahl;
 
-use Nahl\ORM\Convert;
+use Nahl\Convert;
 
 class Mapper
 {
@@ -47,13 +47,13 @@ class Mapper
                             $map_result[$mp_key] = self::mapChildren($data_orig, $map_value['primary_key'], $map_result[$detailKey_], $map_value['map']);
                         }
 
-                    } else if(!isset($data[$map_value['value']]) || (empty($data[$map_value['value']]) && $data[$map_value['value']]!="0")) {
+                    } else if(!isset($data[$map_value['name']]) || (empty($data[$map_value['name']]) && $data[$map_value['name']]!="0")) {
                         $tmpx = explode(".", $mp_key);
                         if(count($tmpx)>=2) array_pop($tmpx);
                         $mp_key = implode(".", $tmpx);
                         $map_result[$mp_key] = null;
                     } else {
-                        $map_result[$mp_key] = Convert::convert($map_value['type'], $data[$map_value['value']], $opts);
+                        $map_result[$mp_key] = Convert::convert($map_value['type'], $data[$map_value['name']], $opts);
                         if(isset($map_value['charset']) && $map_value['charset']) {
                             $map_result[$mp_key] = html_entity_decode($map_result[$mp_key]);
                         }

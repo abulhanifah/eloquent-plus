@@ -5,6 +5,7 @@ namespace Nahl;
 use Illuminate\Database\Eloquent\Builder as BaseBuilder;
 use Nahl\Exceptions\NotFoundException;
 use Nahl\Mapper;
+use Illuminate\Support\Facades\DB;
 
 class Builder extends BaseBuilder {
     public static $pagination = [
@@ -62,10 +63,10 @@ class Builder extends BaseBuilder {
         $ret['fields'] = isset($params['fields']) ? $params['fields'] : [];
         $ret['sorts'] = isset($params['sort']) ? $params['sort'] : [];
         $ret['page'] = (isset($params['page']) && is_numeric($params['page'])) ? (int)$params['page'] : 1;
-        $ret['per_page'] = (isset($params['per_page']) && is_numeric($params['per_page'])) ? (int)$params['per_page'] : get_class($this)::$pagination['default'];
+        $ret['per_page'] = (isset($params['per_page']) && is_numeric($params['per_page'])) ? (int)$params['per_page'] : $this::$pagination['default'];
         $filters = [];
         foreach ($params as $key => $value) {
-            if (!in_array(strtolower($key), get_class($this)::$except)) {
+            if (!in_array(strtolower($key), $this::$except)) {
                 $filters[$key] = $value;
             }
         }
@@ -83,8 +84,8 @@ class Builder extends BaseBuilder {
         $this->params = $ret;
     }
 
-    public function getParams() {
-        return $this->params;
+    public function getParams($key=null) {
+        return ($key) ? $this->params[$key] : $this->params;
     }
 
     public function singleMap($request=[]) {
@@ -111,16 +112,16 @@ class Builder extends BaseBuilder {
         $this->setParams($request);
         $query = $this->query;
         $subquery = $this->getSubQuery($query);
-        
-        $query = $query->table($this->model->table)
-            ->fromSub($subquery." as ".$this->model->table_alias);
 
-        if(isset($this->model->relations)) {
-            foreach ($this->model->relations as $rel) {
-                $this->getJoin($query,$rel);
-            }
+        $query = $query->getConnection()->table($this->model->table)
+            ->fromSub($subquery,$this->model->table_alias);
+
+        foreach ($this->model->table_relations as $rel) {
+            $this->getJoin($query,$rel);
         }       
 
+        $this->getFields($query, $this->params['fields']);
+        
         return Mapper::getMapResult($query, $this->model->getMapTable(), $this->model->getMapFields()); 
     }
 
@@ -132,42 +133,42 @@ class Builder extends BaseBuilder {
     }
 
     protected function getSubQuery($query) {
-        $query = $query->table($this->model->table." as ".$this->model->table_alias);
+        $query = $query->getConnection()->table($this->model->table." as ".$this->model->table_alias);
 
-        if(isset($this->model->relations)) {
-            foreach ($this->model->relations as $rel) {
-                if($rel['type'] == 'inner'){
-                    $this->getJoin($query,$rel);
-                }
+        foreach ($this->model->table_relations as $rel) {
+            if($rel['type'] == 'inner'){
+                $this->getJoin($query,$rel);
             }
         }
+
+        $query->select($this->model->table_alias.".*");
+
         return $query;
     }
 
     /**
-     *
      * @param  \Closure|\Illuminate\Database\Query\Builder|string $query
-     * @param  array $map
      * @param  array $params
      * @param  boolean $allowed_raw
      */
-    public static function getFields($query=[], $map=[], $params=[],$allowed_raw=false)
+    public function getFields($query,$params=[],$allowed_raw=false)
     {
+        $map = $this->model->maps['fields'];
         if (count($query)>0) {
             $ret = [];
             if (count($params)>0) {
                 $fields = Convert::arrayToDot($params, self::$operators);
                 foreach (array_keys($fields) as $field) {
-                    if(!isset($map[$field]['value'])){
+                    if(!isset($map[$field]['name'])){
                         continue;
                     } else {
-                        $query->addSelect($map[$field]['value'] . ' as ' . $map[$field]['value']);
+                        $query->addSelect($map[$field]['name'] . ' as ' . $map[$field]['name']);
                     }
                 }
                 if($allowed_raw) {
                     foreach ($map as $key => $value) {
                         if (isset($value['raw'])) {
-                            $query->selectRaw($value['raw'] . ' as ' . $value['value']);
+                            $query->selectRaw($value['raw'] . ' as ' . $value['name']);
                         }
                     }    
                 }
@@ -176,9 +177,9 @@ class Builder extends BaseBuilder {
                     if (isset($value['is_hide']) && $value['is_hide']) {
                         continue;
                     } else if (isset($value['raw'])) {
-                        $query->selectRaw($value['raw'] . ' as ' . $value['value']);
+                        $query->selectRaw($value['raw'] . ' as ' . $value['name']);
                     } else {
-                        $query->addSelect($value['value'] . ' as ' . $value['value']);
+                        $query->addSelect($value['name'] . ' as ' . $value['name']);
                     }
                 }
             }
