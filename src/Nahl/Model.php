@@ -5,6 +5,8 @@ namespace Nahl;
 use Illuminate\Database\Eloquent\Model as BaseModel;
 use Illuminate\Support\Str;
 use Nahl\Providers\QueryBuilder;
+use Nahl\Exceptions\PermissionException;
+use Nahl\Exceptions\ValidationException;
 
 /**
  * @mixin \Illuminate\Database\Eloquent\Builder
@@ -232,4 +234,12 @@ abstract class Model extends BaseModel {
         $method = $type."Map";
    		return static::query()->$method($params);
    	}
+
+    public static function validate($maps,$params,$method='POST') {
+        ValidationException::validate($params,$maps);
+    }
+
+    public static function authorize($roles,$user_roles,$filter=[]) {
+        PermissionException::checkPermission($roles,$user_roles,$filter);
+    }
 }

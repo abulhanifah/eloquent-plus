@@ -95,7 +95,7 @@ class Builder extends BaseBuilder {
     public function lookupMap($request=[]) {
         $res = $this->multiMap($request);
         if($res) {
-            return $res[0];
+            return $res;
         } else {
             throw new NotFoundException($this->params['filter']);
         }
@@ -136,7 +136,9 @@ class Builder extends BaseBuilder {
     }
 
     public function countMap($request=[]) {
-        $this->setParams($request);
+        $params = is_array($request) ? $request : $request->all();
+        $this->setParams($params);
+
         $query = $this->query;
         $query = $this->getSubQuery($query,$this->model->maps['fields']);
         return $this->getCountQuery($query);
