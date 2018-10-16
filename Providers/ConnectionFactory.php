@@ -1,14 +1,14 @@
 <?php
 
-namespace Nahl\Providers;
+namespace Zahirlib\Eloquent\Providers;
 
 use InvalidArgumentException;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Connectors\ConnectionFactory as BaseConnectionFactory;
-use Nahl\Providers\Connections\MySqlConnection;
-use Nahl\Providers\Connections\SQLiteConnection;
-use Nahl\Providers\Connections\PostgresConnection;
-use Nahl\Providers\Connections\SqlServerConnection;
+use Zahirlib\Eloquent\Providers\Connections\MySqlConnection;
+use Zahirlib\Eloquent\Providers\Connections\SQLiteConnection;
+use Zahirlib\Eloquent\Providers\Connections\PostgresConnection;
+use Zahirlib\Eloquent\Providers\Connections\SqlServerConnection;
 
 class ConnectionFactory extends BaseConnectionFactory
 {

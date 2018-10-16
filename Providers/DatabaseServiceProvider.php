@@ -1,8 +1,8 @@
 <?php
 
-namespace Nahl\Providers;
+namespace Zahirlib\Eloquent\Providers;
 
-use Nahl\Providers\ConnectionFactory;
+use Zahirlib\Eloquent\Providers\ConnectionFactory;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\DatabaseServiceProvider as BaseServiceProvider;
 

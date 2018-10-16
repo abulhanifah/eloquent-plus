@@ -1,8 +1,8 @@
 <?php
-namespace Nahl\Exceptions;
+namespace Zahirlib\Eloquent\Exceptions;
 
 use Exception;
-use Nahl\Validator;
+use Zahirlib\Eloquent\Validator;
 
 class ValidationException extends Exception
 {

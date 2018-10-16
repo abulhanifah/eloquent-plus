@@ -1,6 +1,6 @@
 <?php
 
-namespace Nahl;
+namespace Zahirlib\Eloquent;
 
 use \DateTime;
 use \RecursiveArrayIterator;

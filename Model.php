@@ -1,12 +1,12 @@
 <?php
 
-namespace Nahl;
+namespace Zahirlib\Eloquent;
 
 use Illuminate\Database\Eloquent\Model as BaseModel;
 use Illuminate\Support\Str;
-use Nahl\Providers\QueryBuilder;
-use Nahl\Exceptions\PermissionException;
-use Nahl\Exceptions\ValidationException;
+use Zahirlib\Eloquent\Providers\QueryBuilder;
+use Zahirlib\Eloquent\Exceptions\PermissionException;
+use Zahirlib\Eloquent\Exceptions\ValidationException;
 
 /**
  * @mixin \Illuminate\Database\Eloquent\Builder
@@ -33,6 +33,14 @@ abstract class Model extends BaseModel {
      * @var array
      */
     static protected $fields = [];
+
+
+    /**
+     * The validaation rules.
+     *
+     * @var array
+     */
+    static protected $rules = [];
 
     /**
      * The map results.
@@ -67,7 +75,7 @@ abstract class Model extends BaseModel {
     /**
      * Begin querying the model.
      *
-     * @return Nahl\Providers\QueryBuilder
+     * @return Zahirlib\Eloquent\Providers\QueryBuilder
      */
     public static function query()
     {
@@ -77,7 +85,7 @@ abstract class Model extends BaseModel {
     /**
      * Get a new query builder for the model's table.
      *
-     * @return Nahl\Providers\QueryBuilder
+     * @return Zahirlib\Eloquent\Providers\QueryBuilder
      */
     public function newQuery()
     {
@@ -93,7 +101,7 @@ abstract class Model extends BaseModel {
     /**
      * Get a new query builder that doesn't have any global scopes.
      *
-     * @return Nahl\Providers\QueryBuilder|static
+     * @return Zahirlib\Eloquent\Providers\QueryBuilder|static
      */
     public function newQueryWithoutScopes()
     {
@@ -110,7 +118,7 @@ abstract class Model extends BaseModel {
     /**
      * Get a new query builder instance for the connection.
      *
-     * @return Nahl\Providers\QueryBuilder
+     * @return Zahirlib\Eloquent\Providers\QueryBuilder
      */
     protected function newBaseQueryBuilder()
     {
@@ -195,6 +203,9 @@ abstract class Model extends BaseModel {
                     $rel['on'] = [$rel['on']];
                 }
             }
+            if(!isset($rel['type'])) {
+                $rel['type'] = 'hasMany';
+            }
             $maps['relations'][$krel] = $rel;
         }
         if(isset($maps['relations'])) {
@@ -205,11 +216,25 @@ abstract class Model extends BaseModel {
 
     public function setMapFields($maps=[]) {
         if(!isset($maps['fields'])) {
-            //todo get from attributes
+            $columns = $this->newQuery()->getConnection()->getSchemaBuilder()->getColumnListing($this->table);
+            $fields = [];
+            foreach ($columns as $col) {
+                $fields[$col] = ['name' => $this->table_alias.'.'.$col,'type' => 'string'];
+            }
+            $maps['fields'] = $fields;
         }
 
         if(isset($maps['fields'])) {
+            $rules = array_merge([],(isset($maps['rules']) ? $maps['rules'] : []));
+            foreach ($maps['fields'] as $key => $value) {
+                if(isset($value['validate'])) {
+                    $rules['POST'][$key] = $value['validate'];
+                    $rules['PUT'][$key] = "required|".$value['validate'];
+                    $rules['PATCH'][$key] = $value['validate'];
+                }
+            }
             $this->fields = $maps['fields'];
+            $this->rules = $rules;
         }
 
         $this->maps = $maps;
@@ -217,6 +242,10 @@ abstract class Model extends BaseModel {
 
     public function getMapFields() {
         return $this->maps['fields'];
+    }
+
+    public function getMapRules($method) {
+        return $this->maps['fields'][$method] ?: [] ;
     }
 
     public function setMaps($maps=[]) {
@@ -235,8 +264,9 @@ abstract class Model extends BaseModel {
    		return static::query()->$method($params);
    	}
 
-    public static function validate($maps,$params,$method='POST') {
-        ValidationException::validate($params,$maps);
+    public static function validate($maps,$params,$method) {
+        (new static())->setMaps($maps);
+        ValidationException::validate($params,$this->getMapRules($method));
     }
 
     public static function authorize($roles,$user_roles,$filter=[]) {

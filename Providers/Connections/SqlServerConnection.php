@@ -1,15 +1,15 @@
 <?php 
-namespace Nahl\Providers\Connections;
+namespace Zahirlib\Eloquent\Providers\Connections;
 
-use Illuminate\Database\PostgresConnection as BaseConnection;
-use Nahl\Providers\QueryBuilder;
+use Illuminate\Database\SqlServerConnection as BaseConnection;
+use Zahirlib\Eloquent\Providers\QueryBuilder;
 
-class PostgresConnection extends BaseConnection {
+class SqlServerConnection extends BaseConnection {
     /**
     * Begin a fluent query against a database table.
     *
     * @param  string  $table
-    * @return MySql\Query\Builder
+    * @return Zahirlib\Eloquent\Providers\QueryBuilder
     */
     public function table($table)
     {

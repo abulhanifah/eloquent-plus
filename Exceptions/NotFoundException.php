@@ -1,5 +1,5 @@
 <?php
-namespace Nahl\Exceptions;
+namespace Zahirlib\Eloquent\Exceptions;
 
 use Exception;
 

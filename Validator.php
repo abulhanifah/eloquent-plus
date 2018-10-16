@@ -1,8 +1,8 @@
 <?php
 
-namespace Nahl;
+namespace Zahirlib\Eloquent;
 use Illuminate\Support\Facades\Validator as BaseValidator;
-use Nahl\Convert;
+use Zahirlib\Eloquent\Convert;
 
 class Validator extends BaseValidator
 {

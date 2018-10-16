@@ -1,15 +1,15 @@
 <?php 
-namespace Nahl\Providers\Connections;
+namespace Zahirlib\Eloquent\Providers\Connections;
 
 use Illuminate\Database\MySqlConnection as BaseConnection;
-use Nahl\Providers\QueryBuilder;
+use Zahirlib\Eloquent\Providers\QueryBuilder;
 
 class MySqlConnection extends BaseConnection {
     /**
     * Begin a fluent query against a database table.
     *
     * @param  string  $table
-    * @return Nahl\Providers\QueryBuilder
+    * @return Zahirlib\Eloquent\Providers\QueryBuilder
     */
     public function table($table)
     {

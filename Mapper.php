@@ -1,8 +1,8 @@
 <?php
 
-namespace Nahl;
+namespace Zahirlib\Eloquent;
 
-use Nahl\Convert;
+use Zahirlib\Eloquent\Convert;
 
 class Mapper
 {
@@ -90,6 +90,26 @@ class Mapper
         $res = [];
         foreach ($map as $key => $value) {
             $arr = explode(".", $value['name']);
+            if($arr[0] == $prefix) {
+                $res[$key] = $value;
+            }
+        }
+        return $res;
+    }
+
+    /**
+     * Filter map by prefix item
+     *
+     * @param  array $map
+     * @param  string $prefix
+     */
+    public static function mapByPrefixItem($map=[], $prefix=null)
+    {
+        $res = [];
+        foreach ($map as $key => $value) {
+            reset($value);
+            $k = key($value);
+            $arr = explode(".", $k);
             if($arr[0] == $prefix) {
                 $res[$key] = $value;
             }

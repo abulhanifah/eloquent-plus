@@ -1,5 +1,5 @@
 <?php
-namespace Nahl\Exceptions;
+namespace Zahirlib\Eloquent\Exceptions;
 
 use Exception;
 use Illuminate\Support\Collection;
@@ -21,7 +21,7 @@ class PermissionException extends Exception
 
     public static function checkPermission($roles, $user_roles=[], $filters=[])
     {
-        $col = Collection(array_diff_key($roles,$user_roles));
+        $col = new Collection(array_diff_key($roles,$user_roles));
         if($col->isNotEmpty()) {
             foreach ($filters as $key => $value) {
                 $col = $col->contains($key,$value);    

@@ -1,5 +1,5 @@
 <?php 
-namespace Nahl\Providers;
+namespace Zahirlib\Eloquent\Providers;
 
 use Closure;
 use RuntimeException;
@@ -58,9 +58,9 @@ class QueryBuilder extends BaseBuilder {
     /**
      * Makes "from" fetch from a subquery.
      *
-     * @param  \Closure|Nahl\Providers\QueryBuilder|string $query
+     * @param  \Closure|Zahirlib\Eloquent\Providers\QueryBuilder|string $query
      * @param  string  $as
-     * @return Nahl\Providers\QueryBuilder|static
+     * @return Zahirlib\Eloquent\Providers\QueryBuilder|static
      *
      * @throws \InvalidArgumentException
      */

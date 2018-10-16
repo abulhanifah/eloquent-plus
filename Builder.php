@@ -1,10 +1,10 @@
 <?php
 
-namespace Nahl;
+namespace Zahirlib\Eloquent;
 
 use Illuminate\Database\Eloquent\Builder as BaseBuilder;
-use Nahl\Exceptions\NotFoundException;
-use Nahl\Mapper;
+use Zahirlib\Eloquent\Exceptions\NotFoundException;
+use Zahirlib\Eloquent\Mapper;
 use Illuminate\Support\Facades\DB;
 
 class Builder extends BaseBuilder {
@@ -111,7 +111,7 @@ class Builder extends BaseBuilder {
         $params = is_array($request) ? $request : $request->all();
         $this->setParams($params);
 
-        $map = $this->model->maps['fields'];
+        $map = $this->model->fields;
         $query = $this->query;
         $subquery = $this->getSubQuery($query,$map);
 
@@ -140,30 +140,56 @@ class Builder extends BaseBuilder {
         $this->setParams($params);
 
         $query = $this->query;
-        $query = $this->getSubQuery($query,$this->model->maps['fields']);
+        $query = $this->getSubQuery($query,$this->model->fields);
         return $this->getCountQuery($query);
+    }
+
+    protected function getHasOneRelations() {
+        $relations = [];
+        $map = $this->model->fields;
+        $params = array_merge($this->params['filter'],$this->params['sort'],$this->params['or']);
+        foreach ($this->model->table_relations as $rel) {
+            if($rel['type'] == 'hasOneparams'){
+                $mapPrefix = Mapper::mapByPrefix($map, $rel['as']);
+                $filters = Mapper::getMapWhere($mapPrefix, $params, static::$operators);
+                if(count($filter)>0) {
+                    $rel['type'] = "inner";
+                    $relations[] = $rel;
+                }
+            }
+        }
+        return $relations;
     }
 
     protected function getSubQuery($query,$map) {
         $query = $query->getConnection()->table($this->model->table." as ".$this->model->table_alias);
 
-        foreach ($this->model->table_relations as $rel) {
-            if($rel['type'] == 'inner'){
-                $this->getJoin($query,$rel);
+        $hasOneRelations = $this->getHasOneRelations();
+
+        foreach ($hasOneRelations as $rel) {
+            $this->getJoin($query,$rel);
+            if (isset($this->maps['where'])) {
+                $mapWhere = Mapper::mapByPrefixItem($this->maps['where'],$rel['as']);
+                $this->getOrder($query, [], $mapOrder);
+            }
+            if (count($this->params['filters'])>0) {
+                $this->getWhere($query, Mapper::mapByPrefix($map,$rel['as']), $this->params['filters']);
+            }
+            if (count($this->params['or'])>0) {
+                $this->getWhere($query, Mapper::mapByPrefix($map,$rel['as']), $this->params['or'],'or');
+            }
+            if (count($this->params['sorts'])>0) {
+                $this->getOrder($query, Mapper::mapByPrefix($map,$rel['as']), $this->params['sorts']);
+            }
+            if (isset($this->maps['order'])) {
+                $mapOrder = Mapper::mapByPrefixItem($this->maps['order'],$rel['as']);
+                $this->getOrder($query, [], $mapOrder);
             }
         }
 
         $query->select($this->model->table_alias.".*");
 
-        if (count($this->params['filters'])>0) {
-            $this->getWhere($query, Mapper::mapByPrefix($map, $this->model->table_alias), $this->params['filters']);
-        }
 
-        if (count($this->params['sorts'])>0) {
-            $this->getOrder($query, Mapper::mapByPrefix($map, $this->model->table_alias), $this->params['sorts']);
-        } else if (isset($this->maps['order']['main'])) {
-            $this->getOrder($query, [], $this->maps['order']['main']);
-        }
 
         return $query;
     }
@@ -175,7 +201,7 @@ class Builder extends BaseBuilder {
      */
     public function getFields($query,$params=[],$allowed_raw=false)
     {
-        $map = $this->model->maps['fields'];
+        $map = $this->model->fields;
         if (count($query)>0) {
             $ret = [];
             if (count($params)>0) {
