@@ -147,17 +147,24 @@ class Builder extends BaseBuilder {
     protected function getHasOneRelations() {
         $relations = [];
         $map = $this->model->fields;
-        $params = array_merge($this->params['filter'],$this->params['sort'],$this->params['or']);
+
         foreach ($this->model->table_relations as $rel) {
-            if($rel['type'] == 'hasOneparams'){
+            if($rel['type'] == 'hasOne'){
                 $mapPrefix = Mapper::mapByPrefix($map, $rel['as']);
-                $filters = Mapper::getMapWhere($mapPrefix, $params, static::$operators);
-                if(count($filter)>0) {
+                $mapPrefixKey = Mapper::mapByPrefixItem($map, $rel['as']);
+
+                $filters = Mapper::getMapWhere($mapPrefix, $this->params['filters'], static::$operators);
+                $or = Mapper::getMapWhere($mapPrefix, $this->params['or'], static::$operators);
+
+                $sorts = Mapper::mapOrder([],$mapPrefixKey,Convert::arrayToDot($this->params['sorts'], static::$operators));
+
+                if(count($filters)>0 || count($or)>0 || count($sorts)>0) {
                     $rel['type'] = "inner";
                     $relations[] = $rel;
                 }
             }
         }
+
         return $relations;
     }
 
@@ -166,29 +173,29 @@ class Builder extends BaseBuilder {
 
         $hasOneRelations = $this->getHasOneRelations();
 
+            
         foreach ($hasOneRelations as $rel) {
             $this->getJoin($query,$rel);
-            if (isset($this->maps['where'])) {
-                $mapWhere = Mapper::mapByPrefixItem($this->maps['where'],$rel['as']);
-                $this->getOrder($query, [], $mapOrder);
-            }
-            if (count($this->params['filters'])>0) {
-                $this->getWhere($query, Mapper::mapByPrefix($map,$rel['as']), $this->params['filters']);
-            }
-            if (count($this->params['or'])>0) {
-                $this->getWhere($query, Mapper::mapByPrefix($map,$rel['as']), $this->params['or'],'or');
-            }
-            if (count($this->params['sorts'])>0) {
-                $this->getOrder($query, Mapper::mapByPrefix($map,$rel['as']), $this->params['sorts']);
-            }
-            if (isset($this->maps['order'])) {
-                $mapOrder = Mapper::mapByPrefixItem($this->maps['order'],$rel['as']);
-                $this->getOrder($query, [], $mapOrder);
-            }
         }
 
         $query->select($this->model->table_alias.".*");
 
+        if (isset($this->maps['where'])) {
+            $this->getWhere($query, [], $this->maps['where']);
+        }
+        if (count($this->params['filters'])>0) {
+            $this->getWhere($query, $map, $this->params['filters']);
+        }
+        if (count($this->params['or'])>0) {
+            $this->getWhere($query, $map, $this->params['or'],'or');
+        }
+
+        if (count($this->params['sorts'])>0) {
+            $this->getOrder($query, $map, $this->params['sorts']);
+        }
+        if (isset($this->maps['order'])) {
+            $this->getOrder($query, [], $this->maps['order']);
+        }
 
 
         return $query;
@@ -254,9 +261,12 @@ class Builder extends BaseBuilder {
                             $query->where($filter[0], $filter[1], $filter[2]);
                         }
                     } else if ($type=='or') {
-                        foreach ($params as $or_params) {
+                        foreach ($params as $kor => $or_params) {
+                            foreach ($or_params as $kop => $vop) {
+                                $or_params[$kop] = [$kor => $vop];
+                            }
                             $filters = [];
-                            $filters = Mapper::getMapWhere($map, $or_params, static::$operators);
+                            $filters = Mapper::getMapWhere($map, $or_params, static::$operators,true);
                             $query->where(function ($query) use ($filters) {
                                 foreach ($filters as $or_filter) {
                                     $query->where($or_filter[0], $or_filter[1], $or_filter[2], 'or');
@@ -315,13 +325,7 @@ class Builder extends BaseBuilder {
                 $ret = [];
                 if (count($params)>0) {
                     $sorts = Convert::arrayToDot($params, static::$operators);
-                    foreach ($sorts as $sort => $value) {
-                        if(!isset($map[$sort])){
-                            continue;
-                        } else {
-                            $ret[$map[$sort]['name']] = ($value==-1 || $value=='name') ? 'desc' : 'asc';
-                        }
-                    }
+                    $ret = Mapper::mapOrder($ret,$map,$sorts);
                 }
                 foreach ($ret as $column => $direction) {
                     $query->orderBy($column, $direction);
@@ -347,6 +351,11 @@ class Builder extends BaseBuilder {
     public static function getJoin($query=[], $table=[])
     {
         if (count($query)>0) {
+            if($table['type'] == 'inner') {
+                $type = 'inner';
+            } else {
+                $type = 'left';
+            }
             $query->join($table['table'].' as '.$table['as'], function ($join) use ($table) {
                 if (isset($table['first'])) {
                     $join->on($table['first'], $table['operator'], $table['second']);
@@ -364,7 +373,7 @@ class Builder extends BaseBuilder {
                         $join->on(DB::raw($table['on'][0]), $table['on'][1], DB::raw($table['on'][2]));
                     }
                 }
-            },null,null,$table['type']);
+            },null,null,$type);
         }
     }
 
@@ -375,7 +384,6 @@ class Builder extends BaseBuilder {
             $count_obj = $query->selectRaw('count(DISTINCT('.$this->model->maps['table']['primary_key'].')) as count')->first();
             $count = $count_obj->count;
         }
-
         return $count;
     }
 

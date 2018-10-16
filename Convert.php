@@ -155,7 +155,7 @@ class Convert
      *
      * @param  array $params
      */
-    public static function arrayToDot($params, $operators = []) 
+    public static function arrayToDot($params, $operators = [],$isdebug=false) 
     {
         $ritit = new RecursiveIteratorIterator(new RecursiveArrayIterator($params));
         $res = [];

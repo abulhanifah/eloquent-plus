@@ -109,7 +109,7 @@ class Mapper
         foreach ($map as $key => $value) {
             reset($value);
             $k = key($value);
-            $arr = explode(".", $k);
+            $arr = explode(".", $value[$k]);
             if($arr[0] == $prefix) {
                 $res[$key] = $value;
             }
@@ -300,15 +300,38 @@ class Mapper
 
     /**
      *
+     * @param  array $ret
+     * @param  array $map
+     * @param  array $sorts
+     */
+    public static function mapOrder($ret=[], $map = [], $sorts=[]) {
+        foreach ($sorts as $sort => $value) {
+            if(!isset($map[$sort])){
+                continue;
+            } else {
+                $ret[$map[$sort]['name']] = ($value==-1 || $value=='name') ? 'desc' : 'asc';
+            }
+        }
+        return $ret;
+    }
+
+    /**
+     *
      * @param  array $map
      * @param  array $params
      */
-    public static function getMapWhere($map, $params, $operators)
+    public static function getMapWhere($map, $params, $operators,$isdebug=false)
     {
         $ret = [];
         if (count($params)>0) {
-            $filters = Convert::arrayToDot($params, $operators);
+            $filters = Convert::arrayToDot($params, $operators,$isdebug);
             foreach ($filters as $filter => $value) {
+                // filter for $or statement
+                $pref_filter = explode(".", $filter);
+                if(is_numeric($pref_filter[0])) {
+                    $filter = implode(".",array_slice($pref_filter, 1));
+                }
+
                 if(!isset($map[$filter]['name'])){
                     continue;
                 } else if (is_array($value)) {
